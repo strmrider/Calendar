@@ -17,7 +17,7 @@ type Event struct {
 
 type reminderAlert func(event *Event)
 
-func createEvent(title, content, date string, reminder reminderAlert) *Event{
+func CreateEvent(title, content, date string, reminder reminderAlert) *Event{
 	event := new(Event)
 	event.title = title
 	event.content = content
@@ -31,7 +31,25 @@ func createEvent(title, content, date string, reminder reminderAlert) *Event{
 	return event
 }
 
-func (event *Event) runTimer(){
+/*Getters and setters*/
+
+func (event *Event) Title() string{
+	return event.title
+}
+
+func (event *Event) Content() string{
+	return event.title
+}
+
+func (event *Event) SetTitle(title string){
+	event.title = title
+}
+
+func (event *Event) SetContent(content string){
+	event.content = content
+}
+
+func (event *Event) RunTimer(){
 	diff := event.alertTime.Sub(time.Now())
 	fmt.Println(event.alertTime)
 	fmt.Println(time.Now())
@@ -49,11 +67,11 @@ func (event *Event) runTimer(){
 	}(event)
 }
 
-func (event *Event) stopTimer(){
+func (event *Event) StopTimer(){
 	event.timer.Stop()
 }
 
-func (event *Event) print(){
+func (event *Event) Print(){
 	fmt.Printf("%s\t%s\n", event.title, event.alertTime.Format(time.RFC1123))
 	fmt.Println(event.content)
 	fmt.Println()
