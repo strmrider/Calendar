@@ -1,4 +1,13 @@
 Calenar managment and tasks scheduler
+## Features
+* Complete and bult in years settings
+* Full calendar managment
+* Supports Events management and tasking schedules
+* Events timing alerts
+* Newtork options
+* Supports Serialization
+* Files I/O support
+* Supports built-in thread synchronization
 
 ## How to use
 Import package
@@ -68,7 +77,8 @@ month.Summary()
 // print month (a day with an event will be marked with *)
 month.Print()
 ```
-```Output
+Output
+```
 December
 31
 0
@@ -187,4 +197,22 @@ cl.ShareOnNetwork(port)
 calendar_host = "141.25.41.4"
 // read calendar from via network with a reminder function for existed events (using alert funcion from previous sections)
 newCal := calendar.ReadCalendarFromNetwork(calendar_host, port, alert)
+```
+### Thread sync
+Synchronize calander's threads with other threads
+```Go
+import (
+  "sync"
+)
+
+func main() {
+  var wg sync.WaitGroup
+  // set sync option
+  calendar.SetWG(&wg)
+  // main thread waits until all calendar's derivative threads are done
+  wg.Wait()
+  // cancels sync option
+  calendar.SetWG(nil)
+ }
+
 ```
