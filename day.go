@@ -40,6 +40,7 @@ type Day struct {
 	index     int
 	name      string
 	events    []Event
+	
 }
 
 func createDay(dayNumber int) *Day {
@@ -49,41 +50,48 @@ func createDay(dayNumber int) *Day {
 	return day
 }
 
-func (day *Day) getDay() string {
+func (day *Day) GetDay() string {
 	return day.name
 }
 
-func (day *Day) addEvent(event *Event) {
+func (day *Day) AddEvent(event *Event) {
 	day.events = append(day.events, *event)
 }
 
-func (day *Day) removeEvent(index int) {
-	day.events = append(day.events[:index], day.events[index+1:]...)
+func (day *Day) RemoveEvent(index int) {
+	if index < 0 || index > day.NumOfEvents()-1{
+		panic("Inavlid index")
+	} else {
+		day.events = append(day.events[:index], day.events[index+1:]...)
+	}
 }
 
-func (day *Day) getEvent(index int) *Event {
+func (day *Day) GetEvent(index int) *Event {
+	if index < 0 || index > day.NumOfEvents()-1{
+		panic("Inavlid index")
+	}
 	return &day.events[index]
 }
 
-func (day *Day) clearEvents(index int) {
+func (day *Day) ClearEvents() {
 	for _, event := range day.events {
-		event.stopTimer()
+		event.StopTimer()
 	}
 	day.events = nil
 }
 
-func (day *Day) numOfEvents() int {
+func (day *Day) NumOfEvents() int {
 	return len(day.events)
 }
 
-func (day *Day) summary() string {
+func (day *Day) Summary() string {
 	return fmt.Sprintf("%s: %d events", day.name, len(day.events))
 }
 
-func (day *Day) print() {
+func (day *Day) Print() {
 	fmt.Printf("%s: %d events\n", day.name, len(day.events))
 	for _, event := range day.events{
-		event.print()
+		event.Print()
 	}
 }
 
@@ -109,7 +117,7 @@ func (day *Day) setEventsFromBin(bin []byte, handler reminderAlert){
 		for _, event := range eventsBin{
 			err = json.Unmarshal(event, &fields)
 			if err == nil{
-				day.events = append(day.events, *createEvent(fields[0], fields[1], fields[2], handler))
+				day.events = append(day.events, *CreateEvent(fields[0], fields[1], fields[2], handler))
 			}
 		}
 	}

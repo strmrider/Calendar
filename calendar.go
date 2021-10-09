@@ -2,11 +2,15 @@ package calendar
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
+	"sync"
 )
 
-// from 1900 only
+const ( 
+	minYear = 1900
+	maxYear = 2099
+)
+
 func getStartDay(year int) int{
 	i:= year % 100
 	var yearCode int = (i + (i/4)) % 7
@@ -36,45 +40,67 @@ type SerializedCalendar struct{
 
 type Calendar struct {
 	years []*Year
+	lock sync.Locker
 }
 
-func createCalendar(startYear int, endYear int) *Calendar {
+type eventFinished func()
+
+func CreateCalendar(startYear int, endYear int) *Calendar {
+	if startYear < minYear || startYear > maxYear || 
+		endYear < minYear || endYear > maxYear{
+		panic("Invalid year: years must be between 1900 to 2099")
+	}
+
 	calendar := new(Calendar)
 	for i := startYear; i <= endYear; i++ {
 		calendar.years = append(calendar.years, createYear(i, getStartDay(i)))
 	}
-
 	return calendar
 }
 
-func (calendar *Calendar) getYearsRange() (int, int) {
+func (calendar *Calendar) IsYearExist(year int) bool{
+	var start, end int = calendar.GetRange()
+	return year >= start && year <= end
+}
+
+func (calendar *Calendar) GetRange() (int, int) {
 	var size int = len(calendar.years)
 	return calendar.years[0].year, calendar.years[size-1].year
 }
 
-func (calendar *Calendar) getYear(year int) *Year {
-	start := calendar.years[0].year
+func (calendar *Calendar) GetYear(year int) *Year {
+	if !calendar.IsYearExist(year){
+		panic("Year doesn't exist in calendar")
+	}
+	var start, _ int = calendar.GetRange()
 	return calendar.years[year-start]
 }
 
-func (calendar *Calendar) getDay(year int, month int, day int) *Day {
-	return calendar.getYear(year).getDay(month, day)
+func (calendar *Calendar) GetDay(year int, month int, day int) *Day {
+	if !calendar.IsYearExist(year){
+		panic("Year doesn't exist in calendar")
+	} else if month < 0 || month > 11{
+		panic("Invalid month: month's range must be between 0 to 11")
+	}
+	return calendar.GetYear(year).GetDay(month, day)
 }
 
-func (calendar *Calendar) expandYears(years int){
-	_ , end := calendar.getYearsRange()
+func (calendar *Calendar) ExpandYears(years int){
+	_ , end := calendar.GetRange()
+	if end + years > maxYear{
+		panic("Expansion exceeds maximal year")
+	}
 	for i :=0; i <= years; i++{
 		end++
 		calendar.years = append(calendar.years, createYear(end, getStartDay(end)))
 	}
-	
 }
 
-func (calendar *Calendar) saveToDisk(path string) {
+func (calendar *Calendar) SaveToDisk(path string) {
 	var err error
 	var bin []byte
 	var file *os.File
-	bin, err = calendar.serialize()
+	bin, err = calendar.Serialize()
 	if err == nil{
 		file, err = os.Open(path)
 		defer file.Close()
@@ -89,7 +115,16 @@ func (calendar *Calendar) saveToDisk(path string) {
 	}
 }
 
-func (calendar *Calendar) serialize() ([]byte, error){
+func (calendar *Calendar) ShareOnNetwork(port int){
+	if port <=0 || port > 65535{
+		panic("Invlid port")
+	}
+	var network *Network = createNetwork(calendar.calendarToNetwork)
+	syncwg.operate(wgAdd)
+	go network.Listen(port)
+}
+
+func (calendar *Calendar) Serialize() ([]byte, error){
 	var yearsBin [][]byte
 	var err error
 	var current []byte
@@ -106,13 +141,16 @@ func (calendar *Calendar) serialize() ([]byte, error){
 			}
 		}
 	}
-	var start, end int = calendar.getYearsRange()
+	var start, end int = calendar.GetRange()
 	current, err =  json.Marshal(yearsBin)
 
 	return json.Marshal(SerializedCalendar{start, end, current})
 }
 
-func deserialize(bin []byte, reminder reminderAlert) *Calendar{
+func Deserialize(bin []byte, reminder reminderAlert) *Calendar{
+	if len(bin) == 0{
+		panic("Cannot decode empty bytes array")
+	}
 	var years [][]byte
 	var yearContainer SerializedYear
 	var calendarContainer SerializedCalendar
@@ -121,13 +159,12 @@ func deserialize(bin []byte, reminder reminderAlert) *Calendar{
 
 	err = json.Unmarshal(bin, &calendarContainer)
 	if err == nil{
-		calendar = createCalendar(calendarContainer.Start, calendarContainer.End)
+		calendar = CreateCalendar(calendarContainer.Start, calendarContainer.End)
 		err = json.Unmarshal(calendarContainer.Events, &years)
 		for _, year := range years{
 			err = json.Unmarshal(year, &yearContainer)
-			fmt.Println(yearContainer.Year)
 			if err == nil{
-				calendar.getYear(yearContainer.Year).setEventsFromBin(yearContainer.Bin, reminder)
+				calendar.GetYear(yearContainer.Year).setEventsFromBin(yearContainer.Bin, reminder)
 			}
 		}
 	}
@@ -135,13 +172,23 @@ func deserialize(bin []byte, reminder reminderAlert) *Calendar{
 	return calendar
 }
 
-func loadFromFile(path string, reminder reminderAlert) *Calendar{
+func LoadFromFile(path string, reminder reminderAlert) *Calendar{
 	var bin []byte
 	var err error
 
 	bin, err = os.ReadFile(path)
 	if err == nil{
-		return deserialize(bin, reminder)
+		return Deserialize(bin, reminder)
+	}else if os.IsNotExist(err) {
+		panic("Path does not exist")
+	}
+	return nil
+}
+
+func (calendar *Calendar) calendarToNetwork() []byte{
+	bin, err := calendar.Serialize()
+	if err == nil{
+		return bin
 	}
 	return nil
 }

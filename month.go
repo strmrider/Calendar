@@ -113,35 +113,38 @@ func createMonth(monthType int, firstDay int, leap bool) *Month {
 	return month
 }
 
-func (month *Month) getMonth() string {
+func (month *Month) GetMonth() string {
 	return month.name
 }
 
-func (month *Month) numOfDays() int {
+func (month *Month) NumOfDays() int {
 	return len(month.days)
 }
 
-func (month *Month) getDay(day int) *Day {
+func (month *Month) GetDay(day int) *Day {
+	if day < 0 || day > month.NumOfDays(){
+		panic("Day doesn't exist")
+	}
 	return month.days[day-1]
 }
 
 func (month *Month) getLastDayName() int {
-	return month.days[month.numOfDays()-1].index
+	return month.days[month.NumOfDays()-1].index
 }
 
-func (month *Month) numOfEvents() int {
+func (month *Month) NumOfEvents() int {
 	var sum int = 0
 	for _, day := range month.days{
-		sum += day.numOfEvents()
+		sum += day.NumOfEvents()
 	}
 	return sum
 }
 
-func (month *Month) summary() {
-	fmt.Printf("%s\n", month.getMonth())
+func (month *Month) Summary() {
+	fmt.Printf("%s\n", month.GetMonth())
 	var i int = 0
 	for _, day := range month.days{
-		fmt.Printf("%d %s\n", i+1, day.summary())
+		fmt.Printf("%d %s\n", i+1, day.Summary())
 		i++
 	}
 }
@@ -152,7 +155,7 @@ func (month *Month) serialize() ([]byte, error){
 	var currentDay []byte
 	var i int = 0
 	for _, day := range month.days{
-		if day.numOfEvents() > 0{
+		if day.NumOfEvents() > 0{
 			currentDay, err = day.serialize()
 			if err == nil{
 				currentDay, err = json.Marshal( SerializedDay{i, currentDay})
@@ -173,31 +176,31 @@ func (month *Month) setEventsFromBin(bin []byte, handler reminderAlert){
 		for _, dayBin := range days{
 			err = json.Unmarshal(dayBin, &container)
 			if err == nil{
-				month.getDay(container.Day+1).setEventsFromBin(container.Bin, handler)
+				month.GetDay(container.Day+1).setEventsFromBin(container.Bin, handler)
 			}
 		}
 	}
 }
 
-func (month *Month) print(){
-	fmt.Printf("\n%s\n", month.getMonth())
+func (month *Month) Print(){
+	fmt.Printf("\n%s\n", month.GetMonth())
 	fmt.Println("Sun\tMon\tTue\tWed\tThu\tFri\tSat")
 	fmt.Println("====================================================")
-	for i:=0; i<month.getDay(1).index-1; i++ {
+	for i:=0; i<month.GetDay(1).index-1; i++ {
 		fmt.Printf("\t")
 	}
 
-	for i:=1; i<=month.numOfDays(); i++{
-		if month.getDay(i).numOfEvents() > 0{
+	for i:=1; i<=month.NumOfDays(); i++{
+		if month.GetDay(i).NumOfEvents() > 0{
 			fmt.Printf("*")
 		}
 		fmt.Printf("%d\t", i)
-		if month.getDay(i).index-1 == Saturday{
+		if month.GetDay(i).index-1 == Saturday{
 			fmt.Println()
 			fmt.Println("====================================================")
 		}
 	}
-	if month.getDay(month.numOfDays() -1 ).index-1 != Saturday{
+	if month.GetDay(month.NumOfDays() -1 ).index-1 != Saturday{
 		fmt.Println()
 	}
 }

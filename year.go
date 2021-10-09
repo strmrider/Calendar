@@ -20,8 +20,7 @@ func createYear(year int, firstDay int) *Year {
 	newYear.year = year
 	var day int = firstDay
 	for i := 0; i < 12; i++ {
-		//fmt.Println(day)
-		newYear.months[i] = createMonth(i, day, newYear.isLeap())
+		newYear.months[i] = createMonth(i, day, newYear.IsLeap())
 		day = newYear.months[i].getLastDayName()
 		if day > Saturday {
 			day = Sunday
@@ -30,30 +29,30 @@ func createYear(year int, firstDay int) *Year {
 	return newYear
 }
 
-func (year *Year) getMonth(month int) *Month {
+func (year *Year) GetMonth(month int) *Month {
 	return year.months[month]
 }
 
-func (year *Year) getDay(month int, day int) *Day {
-	return year.months[month].getDay(day)
+func (year *Year) GetDay(month int, day int) *Day {
+	return year.months[month].GetDay(day)
 }
 
 func (year *Year) numOfEvents() int {
 	var sum int = 0
 	for _, month := range year.months{
-		sum += month.numOfEvents()
+		sum += month.NumOfEvents()
 	}
 	return sum
 }
 
-func (year *Year) isLeap() bool {
+func (year *Year) IsLeap() bool {
 	return year.year%4 == 0
 }
 
-func (year *Year) print() {
+func (year *Year) Print() {
 	fmt.Println(year.year)
 	for _, month:= range year.months{
-		month.print()
+		month.Print()
 	}
 }
 
@@ -64,7 +63,7 @@ func (year *Year) serialize() ([]byte, error){
 	var i int = 0
 
 	for _, month := range year.months{
-		if month.numOfEvents() > 0 {
+		if month.NumOfEvents() > 0 {
 			current, err = month.serialize()
 			if err == nil{
 				current, err = json.Marshal(SerializedMonth{i, current})

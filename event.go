@@ -17,13 +17,26 @@ type Event struct {
 
 type reminderAlert func(event *Event)
 
+func twoDigits(number int) string{
+	if number < 10{
+		return fmt.Sprintf("0%d", number)
+	}
+	return fmt.Sprintf("%d", number)
+}
+
+func BuildTime(year, month, day, hour, minute, second int) string{
+	return fmt.Sprintf("%s, %s %s %d %s:%s:%s MST", 
+						getDayName(day)[:3], twoDigits(day), getMonthName(month)[:3], 
+						year, twoDigits(hour), twoDigits(minute), twoDigits(second))
+}
+
 func CreateEvent(title, content, date string, reminder reminderAlert) *Event{
 	event := new(Event)
 	event.title = title
 	event.content = content
 	event.creation = time.Now()
 	event.reminder = reminder
-	t, err:= time.Parse(time.RFC3339, date)
+	t, err:= time.Parse(time.RFC1123, date)
 	if (err == nil){
 		event.alertTime = t
 	}
@@ -49,6 +62,11 @@ func (event *Event) SetContent(content string){
 	event.content = content
 }
 
+func (event *Event) ResetAlertTime(date time.Time){
+	event.StopTimer()
+	event.alertTime = date
+}
+
 func (event *Event) RunTimer(){
 	diff := event.alertTime.Sub(time.Now())
 	fmt.Println(event.alertTime)
@@ -59,9 +77,11 @@ func (event *Event) RunTimer(){
 		diff *= (-1)
 	}
 	event.timer = time.NewTimer(diff)
+	syncwg.operate(wgAdd)
 	go func(event *Event){
 		<-event.timer.C
 		if !event.timer.Stop(){
+			syncwg.operate(wgDone)
 			event.reminder(event)
 		}
 	}(event)
